@@ -83,14 +83,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-3 px-3 py-3 lg:grid-cols-[280px_1fr_320px]" style={{ minHeight: "calc(100vh - 120px)" }}>
+      <div className="grid gap-3 px-3 py-3 grid-cols-1 lg:grid-cols-3" style={{ minHeight: "calc(100vh - 120px)", gridTemplateColumns: "280px 1fr 320px" }}>
         {/* LEFT: ACCOMPLISHED */}
-        <div className="order-2 lg:order-1 min-h-[300px] overflow-y-auto">
+        <div className="min-h-[300px] overflow-y-auto">
           <AccomplishedRail />
         </div>
 
         {/* CENTER: WHEEL */}
-        <div className="order-1 lg:order-2 min-h-[400px] flex items-center justify-center">
+        <div className="min-h-[400px] flex items-center justify-center">
           <WheelCanvas
             sections={state.sections}
             levels={levels}
@@ -101,8 +101,8 @@ export default function Dashboard() {
         </div>
 
         {/* RIGHT: BUDDIES + IN PLAY */}
-        <div className="order-3 min-h-[300px] space-y-3 border-2 border-yellow-500">
-          <div className="bg-yellow-900/50 p-2 text-yellow-400 text-xs">TEST: Right Column</div>
+        <div className="min-h-[300px] space-y-3 border-2 border-red-400 p-2">
+          <div className="bg-red-900/50 p-2 text-red-300 text-xs font-bold">🔴 RIGHT COLUMN</div>
           <BuddyFeed />
           <div className="border-t border-white/10 pt-3">
             <InPlayRail onToast={setToast} />
