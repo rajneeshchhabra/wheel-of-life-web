@@ -1,6 +1,5 @@
 "use client";
 
-import { useStore } from "@/lib/store";
 import type { Activity, ReactionType } from "@/lib/types";
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string; category: "positive" | "supportive" | "playful" }[] = [
@@ -22,7 +21,6 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string; category: "
 ];
 
 export default function BuddyFeed() {
-  const { state, dispatch } = useStore();
 
   // Mock activities (in real app, would come from server)
   const mockActivities: Activity[] = [

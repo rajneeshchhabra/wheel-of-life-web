@@ -56,7 +56,7 @@ export default function OnboardingSimple() {
         {/* STEP 1: NAME + NORTH STAR (COMBINED) */}
         {step === "name" && (
           <Card>
-            <h1 className="text-2xl font-black">Hi! I'm...</h1>
+            <h1 className="text-2xl font-black">Hi! I&apos;m...</h1>
             <input
               autoFocus
               value={name}
@@ -161,7 +161,7 @@ export default function OnboardingSimple() {
         {/* STEP 3: BUDDIES */}
         {step === "buddies" && (
           <Card>
-            <h1 className="text-2xl font-black">Who's got your back?</h1>
+            <h1 className="text-2xl font-black">Who&apos;s got your back?</h1>
             <p className="text-text2 mt-1 text-sm">Pick 1-3 buddies for accountability</p>
 
             {buddies.length > 0 && (
@@ -205,7 +205,7 @@ export default function OnboardingSimple() {
 
             <div className="flex gap-2 mt-6">
               <Secondary onClick={() => setStep("weights")}>Back</Secondary>
-              <Primary onClick={finish}>Let's go</Primary>
+              <Primary onClick={finish}>Let&apos;s go</Primary>
             </div>
           </Card>
         )}

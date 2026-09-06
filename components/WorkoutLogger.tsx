@@ -127,7 +127,7 @@ export default function WorkoutLogger({ habitId, onClose }: { habitId: string; o
             </div>
 
             <div>
-              <label className="text-xs text-text3 block mb-2">How'd it feel?</label>
+              <label className="text-xs text-text3 block mb-2">How&apos;d it feel?</label>
               <div className="flex gap-1 justify-between">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <button
@@ -181,7 +181,7 @@ export default function WorkoutLogger({ habitId, onClose }: { habitId: string; o
             </div>
 
             <div>
-              <label className="text-xs text-text3 block mb-2">How'd it feel?</label>
+              <label className="text-xs text-text3 block mb-2">How&apos;d it feel?</label>
               <div className="flex gap-1 justify-between">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <button

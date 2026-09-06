@@ -14,13 +14,17 @@ function todayKey(d = new Date()) {
 function initialState(): AppState {
   return {
     version: 1,
-    profile: { name: "", purpose: "" },
+    profile: { name: "", purpose: "", northStar: "" },
     sections: [],
     goals: [],
     tasks: [],
     habits: [],
     leaveBehind: [],
     ledger: [],
+    buddies: [],
+    workoutSessions: [],
+    activities: [],
+    reactions: [],
     privacySeen: false,
     setupDone: false,
   };
@@ -29,9 +33,10 @@ function initialState(): AppState {
 export type Action =
   | { type: "hydrate"; state: AppState }
   | { type: "privacySeen" }
-  | { type: "completeSetup"; name: string; purpose: string; weights: Record<string, number> }
+  | { type: "completeSetup"; name: string; purpose: string; weights: Record<string, number>; northStar?: string }
   | { type: "setPurpose"; purpose: string }
   | { type: "setName"; name: string }
+  | { type: "addLedgerEntry"; sectionId: string; points: number; source: string }
   | { type: "setSectionWeight"; id: string; weight: number }
   | { type: "toggleSection"; id: string }
   | { type: "setAspiration"; id: string; aspiration: string; aspiration2: string }
@@ -84,7 +89,7 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         sections,
-        profile: { name: action.name, purpose: action.purpose },
+        profile: { name: action.name, purpose: action.purpose, northStar: action.northStar },
         setupDone: true,
         privacySeen: true,
       };
@@ -220,6 +225,9 @@ function reducer(state: AppState, action: Action): AppState {
         return d;
       });
       return changed ? { ...state, sections } : state;
+    }
+    case "addLedgerEntry": {
+      return awardTo(state, action.sectionId, action.points, action.source);
     }
     default:
       return state;

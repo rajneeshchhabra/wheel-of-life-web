@@ -7,7 +7,6 @@ import WheelCanvas from "@/components/WheelCanvas";
 import { AccomplishedRail, InPlayRail, Modal } from "@/components/Rails";
 import Settings from "@/components/Settings";
 import OnboardingSimple from "@/components/OnboardingSimple";
-import BuddyFeed from "@/components/BuddyFeed";
 import type { Section } from "@/lib/types";
 
 export default function Dashboard() {
