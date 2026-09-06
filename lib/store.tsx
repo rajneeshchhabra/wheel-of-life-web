@@ -1,13 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
 import type { AppState, Goal, Habit, HabitToLeave, PointsEntry, Section, TaskItem } from "./types";
 import { applyDecay, award, streakMultiplier } from "./scoring";
 import { defaultSections } from "./catalog";
 
 const STORAGE_KEY = "wheel-of-life-v1";
 
-function todayKey(d = new Date()) {
+export function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -29,7 +29,7 @@ function calculateMood(state: AppState): AppState["mood"] {
   return "neutral";
 }
 
-function initialState(): AppState {
+export function initialState(): AppState {
   return {
     version: 1,
     profile: { name: "", purpose: "", northStar: "" },
@@ -49,6 +49,30 @@ function initialState(): AppState {
   };
 }
 
+export function normalizeState(input: AppState): AppState {
+  if (!input || !Array.isArray(input.sections)) throw new Error("Invalid saved data");
+  const base = initialState();
+  const merged = { ...base, ...input, profile: { ...base.profile, ...input.profile } };
+  for (const key of ["goals", "tasks", "habits", "leaveBehind", "ledger", "buddies", "workoutSessions", "activities", "reactions"] as const) {
+    if (!Array.isArray(merged[key])) throw new Error(`Invalid saved ${key}`);
+  }
+  merged.sections = input.sections.map((s, index) => ({
+    ...s,
+    icon: s.icon ?? "◉", northStar: s.northStar ?? "",
+    aspiration: s.aspiration ?? "", aspiration2: s.aspiration2 ?? "",
+    sortOrder: s.sortOrder ?? index, enabled: s.enabled ?? true,
+    weight: Number.isFinite(s.weight) ? Math.max(1, Math.min(5, s.weight)) : 3,
+    currentScore: Number.isFinite(s.currentScore) ? Math.max(0, Math.min(100, s.currentScore)) : 0,
+    decayPerDay: Number.isFinite(s.decayPerDay) ? Math.max(0, s.decayPerDay) : 0.5,
+    lastDecayAppliedAt: Number.isFinite(Date.parse(s.lastDecayAppliedAt)) ? s.lastDecayAppliedAt : new Date().toISOString(),
+    brickCount: Number.isFinite(s.brickCount) && s.brickCount > 0 ? Math.floor(s.brickCount) : 12,
+    bricksLit: 0,
+  }));
+  let normalized = merged;
+  for (const section of normalized.sections) normalized = updateBricksForSection(normalized, section.id);
+  return { ...normalized, mood: calculateMood(normalized) };
+}
+
 export type Action =
   | { type: "hydrate"; state: AppState }
   | { type: "privacySeen" }
@@ -58,7 +82,7 @@ export type Action =
   | { type: "addLedgerEntry"; sectionId: string; points: number; source: string }
   | { type: "setSectionWeight"; id: string; weight: number }
   | { type: "toggleSection"; id: string }
-  | { type: "setAspiration"; id: string; aspiration: string; aspiration2: string }
+  | { type: "setAspiration"; id: string; aspiration: string; aspiration2: string; northStar?: string }
   | { type: "addGoal"; sectionId: string; title: string }
   | { type: "achieveGoal"; id: string }
   | { type: "addTask"; sectionId: string; title: string }
@@ -81,7 +105,7 @@ function updateBricksForSection(state: AppState, sectionId: string): AppState {
   const goals = state.goals.filter(g => g.sectionId === sectionId && g.isAchieved).length;
   const tasks = state.tasks.filter(t => t.sectionId === sectionId && t.isDone).length;
   const habits = state.habits.filter(h => h.sectionId === sectionId && h.isFormed).length;
-  const bricksLit = Math.min(goals + tasks + habits, 12); // max 12 bricks
+  const bricksLit = Math.min(goals + tasks + habits, state.sections.find(s => s.id === sectionId)?.brickCount ?? 12); // max 12 bricks
 
   return {
     ...state,
@@ -111,10 +135,10 @@ function awardTo(state: AppState, sectionId: string, points: number, source: str
   return { ...newState, mood: calculateMood(newState) };
 }
 
-function reducer(state: AppState, action: Action): AppState {
+export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "hydrate":
-      return action.state;
+      return normalizeState(action.state);
     case "privacySeen":
       return { ...state, privacySeen: true };
     case "completeSetup": {
@@ -131,7 +155,7 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
     case "setPurpose":
-      return { ...state, profile: { ...state.profile, purpose: action.purpose } };
+      return { ...state, profile: { ...state.profile, purpose: action.purpose, northStar: action.purpose } };
     case "setName":
       return { ...state, profile: { ...state.profile, name: action.name } };
     case "setSectionWeight":
@@ -148,7 +172,7 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         sections: state.sections.map((s) =>
-          s.id === action.id ? { ...s, aspiration: action.aspiration, aspiration2: action.aspiration2 } : s,
+          s.id === action.id ? { ...s, aspiration: action.aspiration, aspiration2: action.aspiration2, northStar: action.northStar ?? s.northStar } : s,
         ),
       };
     case "addGoal": {
@@ -213,7 +237,9 @@ function reducer(state: AppState, action: Action): AppState {
       const habit = state.habits.find((h) => h.id === action.id);
       const today = todayKey();
       if (!habit || habit.lastCheckIn === today) return state;
-      const yesterday = todayKey(new Date(Date.now() - 86_400_000));
+      const previousDay = new Date();
+      previousDay.setDate(previousDay.getDate() - 1);
+      const yesterday = todayKey(previousDay);
       const streak = habit.lastCheckIn === yesterday ? habit.streak + 1 : 1;
       const points = Math.round(3 * streakMultiplier(streak));
       const next = awardTo(state, habit.sectionId, points, `Habit: ${habit.title} (day ${streak})`);
@@ -238,10 +264,17 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "removeLeaveBehind":
       return { ...state, leaveBehind: state.leaveBehind.filter((l) => l.id !== action.id) };
-    case "delete":
-      if (action.kind === "goal") return { ...state, goals: state.goals.filter((g) => g.id !== action.id) };
-      if (action.kind === "task") return { ...state, tasks: state.tasks.filter((t) => t.id !== action.id) };
-      return { ...state, habits: state.habits.filter((h) => h.id !== action.id) };
+    case "delete": {
+      const collection = action.kind === "goal" ? state.goals : action.kind === "task" ? state.tasks : state.habits;
+      const item = collection.find(i => i.id === action.id);
+      if (!item) return state;
+      const next = { ...state,
+        goals: action.kind === "goal" ? state.goals.filter(i => i.id !== action.id) : state.goals,
+        tasks: action.kind === "task" ? state.tasks.filter(i => i.id !== action.id) : state.tasks,
+        habits: action.kind === "habit" ? state.habits.filter(i => i.id !== action.id) : state.habits,
+      };
+      return updateBricksForSection(next, item.sectionId);
+    }
     case "populateDemo": {
       const now = new Date().toISOString();
       const sections = state.sections.map((s) => ({ ...s, currentScore: 85, lastDecayAppliedAt: now, bricksLit: 8 }));
@@ -252,7 +285,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "eraseAll":
       return {
         ...initialState(),
-        sections: state.sections.map((s) => ({ ...s, currentScore: 0, lastDecayAppliedAt: new Date().toISOString() })),
+        sections: state.sections.map((s) => ({ ...s, currentScore: 0, bricksLit: 0, lastDecayAppliedAt: new Date().toISOString() })),
         privacySeen: true,
         setupDone: true,
         profile: state.profile,
@@ -279,12 +312,18 @@ interface StoreValue {
   state: AppState;
   dispatch: (a: Action) => void;
   hydrated: boolean;
+  storageError: string | null;
+  canUndo: boolean;
+  undo: () => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initialState);
+  const [state, rawDispatch] = useReducer(reducer, undefined, initialState);
+  const previous = useRef<AppState | null>(null);
+  const [storageError, setStorageError] = useReducer((_: string | null, value: string | null) => value, null);
+  const readFailed = useRef(false);
   const [hydrated, setHydrated] = useReducer(() => true, false);
 
   useEffect(() => {
@@ -292,25 +331,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as AppState;
-        dispatch({ type: "hydrate", state: parsed });
-        dispatch({ type: "tickDecay" });
+        const normalized = normalizeState(parsed);
+        if (!localStorage.getItem(`${STORAGE_KEY}-backup`)) localStorage.setItem(`${STORAGE_KEY}-backup`, raw);
+        rawDispatch({ type: "hydrate", state: normalized });
+        rawDispatch({ type: "tickDecay" });
       }
     } catch {
-      // ignore corrupt storage
+      readFailed.current = true;
+      setStorageError("Saved data could not be loaded. It has been preserved; reload after checking browser storage.");
     }
     setHydrated();
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || readFailed.current) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setStorageError(null);
     } catch {
-      // storage may be unavailable (private mode)
+      setStorageError("Changes could not be saved in this browser. Keep this tab open and export a backup from Settings.");
     }
   }, [state, hydrated]);
 
-  const value = useMemo(() => ({ state, dispatch, hydrated }), [state, hydrated]);
+  const value = useMemo(() => ({ state, hydrated, storageError,
+    canUndo: previous.current !== null,
+    dispatch: (action: Action) => {
+      previous.current = ["completeTask", "achieveGoal", "checkInHabit"].includes(action.type) ? state : null;
+      rawDispatch(action);
+    },
+    undo: () => {
+      if (previous.current) { rawDispatch({ type: "hydrate", state: previous.current }); previous.current = null; }
+    },
+  }), [state, hydrated, storageError]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

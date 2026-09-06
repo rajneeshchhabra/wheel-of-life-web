@@ -1,6 +1,6 @@
 import type { Section } from "./types";
 
-export const ESSENTIAL_AREAS = ["fitness", "health", "financial", "money"];
+export const ESSENTIAL_AREAS = ["fitness", "health", "financial", "money", "health & fitness", "finances"];
 
 export function isEssential(name: string) {
   return ESSENTIAL_AREAS.includes(name.toLowerCase());

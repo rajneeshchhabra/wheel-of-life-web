@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Section } from "@/lib/types";
 import { LEAVE_BEHIND_CATALOG } from "@/lib/catalog";
@@ -177,7 +177,7 @@ export function InPlayRail({ onToast }: { onToast: (msg: string) => void }) {
   );
 }
 
-function LeaveBehindPicker({ onClose }: { onClose: () => void }) {
+export function LeaveBehindPicker({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useStore();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [custom, setCustom] = useState("");
@@ -387,13 +387,38 @@ function Row({
 }
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const dialog = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusable = () => Array.from(dialog.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]'
+    ) ?? []);
+    (focusable()[0] ?? dialog.current)?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeRef.current(); }
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0], last = elements[elements.length - 1];
+      if (!first) { event.preventDefault(); return; }
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => { document.removeEventListener("keydown", handleKey); document.body.style.overflow = previousOverflow; previousFocus?.focus(); };
+  }, []);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-xl bg-panel rounded-2xl border border-white/10 p-5 shadow-2xl"
+        ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-panel rounded-2xl border border-white/10 p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-bold text-text1 mb-3">{title}</h3>
+        <h3 id={titleId} className="text-base font-bold text-text1 mb-3">{title}</h3>
         {children}
       </div>
     </div>
