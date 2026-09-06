@@ -60,8 +60,8 @@ export default function BuddyFeed() {
   };
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-sm font-bold text-text3 uppercase tracking-wider">Your Buddies</h2>
+    <div className="space-y-3 border-2 border-red-500 p-3">
+      <h2 className="text-sm font-bold text-text3 uppercase tracking-wider">🧑‍🤝‍🧑 Your Buddies</h2>
 
       {mockActivities.length === 0 ? (
         <div className="text-center py-6 text-text3">
