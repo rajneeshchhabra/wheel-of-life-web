@@ -1,6 +1,7 @@
 export interface Section {
   id: string;
   name: string;
+  icon: string; // emoji icon for section
   colorHex: string;
   sortOrder: number;
   currentScore: number; // 0..100
@@ -9,6 +10,9 @@ export interface Section {
   weight: number; // 1..5 — angular width on the wheel
   aspiration: string; // one-word rim label
   aspiration2: string; // fainter label beyond the rim
+  northStar: string; // section-specific north star (e.g., "Vibrant Energy Daily")
+  brickCount: number; // number of achievement bricks for visualization
+  bricksLit: number; // how many bricks are lit up (achievements)
   enabled: boolean;
 }
 
@@ -25,6 +29,7 @@ export interface Goal {
 export interface TaskItem {
   id: string;
   sectionId: string;
+  goalId?: string; // HIERARCHICAL: tasks can belong to a goal
   title: string;
   points: number;
   isDone: boolean;
@@ -134,6 +139,8 @@ export interface Guru {
   relatedAreas?: string[]; // Fitness, Relationships, etc
 }
 
+export type MoodState = "thriving" | "happy" | "content" | "neutral" | "struggling" | "imbalanced" | "overwhelmed";
+
 export interface AppState {
   version: 1;
   profile: Profile;
@@ -143,10 +150,11 @@ export interface AppState {
   habits: Habit[];
   leaveBehind: HabitToLeave[];
   ledger: PointsEntry[];
-  buddies: Buddy[]; // NEW
-  workoutSessions: WorkoutSession[]; // NEW
-  activities: Activity[]; // NEW
-  reactions: Reaction[]; // NEW
+  buddies: Buddy[];
+  workoutSessions: WorkoutSession[];
+  activities: Activity[];
+  reactions: Reaction[];
+  mood: MoodState; // emoticon state - changes with every action
   privacySeen: boolean;
   setupDone: boolean;
 }

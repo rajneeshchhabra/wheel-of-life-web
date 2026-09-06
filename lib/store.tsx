@@ -11,6 +11,24 @@ function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function calculateMood(state: AppState): AppState["mood"] {
+  if (state.sections.length === 0) return "neutral";
+
+  const scores = state.sections.map(s => s.currentScore);
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const maxDev = Math.max(...scores.map(s => Math.abs(s - avg)));
+  const completedToday = state.ledger.filter(e => new Date(e.timestamp).toDateString() === new Date().toDateString()).length;
+
+  // Mood logic
+  if (avg > 80 && maxDev < 20 && completedToday > 2) return "thriving";
+  if (avg > 70 && maxDev < 30 && completedToday > 0) return "happy";
+  if (avg > 50 && maxDev < 40) return "content";
+  if (maxDev > 50) return "imbalanced";
+  if (state.tasks.filter(t => !t.isDone).length > 15) return "overwhelmed";
+  if (avg < 40) return "struggling";
+  return "neutral";
+}
+
 function initialState(): AppState {
   return {
     version: 1,
@@ -25,6 +43,7 @@ function initialState(): AppState {
     workoutSessions: [],
     activities: [],
     reactions: [],
+    mood: "happy",
     privacySeen: false,
     setupDone: false,
   };
@@ -57,6 +76,21 @@ function uid() {
   return crypto.randomUUID();
 }
 
+function updateBricksForSection(state: AppState, sectionId: string): AppState {
+  // Count achievements (goals + tasks + habits) in this section
+  const goals = state.goals.filter(g => g.sectionId === sectionId && g.isAchieved).length;
+  const tasks = state.tasks.filter(t => t.sectionId === sectionId && t.isDone).length;
+  const habits = state.habits.filter(h => h.sectionId === sectionId && h.isFormed).length;
+  const bricksLit = Math.min(goals + tasks + habits, 12); // max 12 bricks
+
+  return {
+    ...state,
+    sections: state.sections.map(s =>
+      s.id === sectionId ? { ...s, bricksLit } : s
+    ),
+  };
+}
+
 function awardTo(state: AppState, sectionId: string, points: number, source: string): AppState {
   const target = state.sections.find((s) => s.id === sectionId);
   if (!target) return state;
@@ -68,11 +102,13 @@ function awardTo(state: AppState, sectionId: string, points: number, source: str
     timestamp: new Date().toISOString(),
     source: result.balanceBonusApplied ? `${source} (balance bonus ×1.5)` : source,
   };
-  return {
+  const newState = {
     ...state,
     sections: state.sections.map((s) => (s.id === sectionId ? result.section : s)),
     ledger: [entry, ...state.ledger],
+    mood: "happy" as const,
   };
+  return { ...newState, mood: calculateMood(newState) };
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -130,12 +166,13 @@ function reducer(state: AppState, action: Action): AppState {
       const goal = state.goals.find((g) => g.id === action.id);
       if (!goal || goal.isAchieved) return state;
       const next = awardTo(state, goal.sectionId, goal.points, `Goal: ${goal.title}`);
-      return {
+      const withGoal = {
         ...next,
         goals: next.goals.map((g) =>
           g.id === action.id ? { ...g, isAchieved: true, achievedAt: new Date().toISOString() } : g,
         ),
       };
+      return updateBricksForSection(withGoal, goal.sectionId);
     }
     case "addTask": {
       const task: TaskItem = {
@@ -152,12 +189,13 @@ function reducer(state: AppState, action: Action): AppState {
       const task = state.tasks.find((t) => t.id === action.id);
       if (!task || task.isDone) return state;
       const next = awardTo(state, task.sectionId, task.points, `Task: ${task.title}`);
-      return {
+      const withTask = {
         ...next,
         tasks: next.tasks.map((t) =>
           t.id === action.id ? { ...t, isDone: true, doneAt: new Date().toISOString() } : t,
         ),
       };
+      return updateBricksForSection(withTask, task.sectionId);
     }
     case "addHabit": {
       const habit: Habit = {
@@ -179,7 +217,7 @@ function reducer(state: AppState, action: Action): AppState {
       const streak = habit.lastCheckIn === yesterday ? habit.streak + 1 : 1;
       const points = Math.round(3 * streakMultiplier(streak));
       const next = awardTo(state, habit.sectionId, points, `Habit: ${habit.title} (day ${streak})`);
-      return {
+      const withHabit = {
         ...next,
         habits: next.habits.map((h) =>
           h.id === action.id
@@ -187,6 +225,7 @@ function reducer(state: AppState, action: Action): AppState {
             : h,
         ),
       };
+      return updateBricksForSection(withHabit, habit.sectionId);
     }
     case "addLeaveBehind": {
       const items: HabitToLeave[] = action.items.map((i) => ({
@@ -205,8 +244,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, habits: state.habits.filter((h) => h.id !== action.id) };
     case "populateDemo": {
       const now = new Date().toISOString();
-      const sections = state.sections.map((s) => ({ ...s, currentScore: 85, lastDecayAppliedAt: now }));
-      return { ...state, sections };
+      const sections = state.sections.map((s) => ({ ...s, currentScore: 85, lastDecayAppliedAt: now, bricksLit: 8 }));
+      const newState = { ...state, sections };
+      newState.mood = calculateMood(newState);
+      return newState;
     }
     case "eraseAll":
       return {
