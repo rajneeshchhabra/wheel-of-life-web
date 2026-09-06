@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Activity, ReactionType } from "@/lib/types";
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string; category: "positive" | "supportive" | "playful" }[] = [
@@ -97,7 +98,7 @@ function ActivityCard({
   onReaction: (activityId: string, type: ReactionType) => void;
   getTimeAgo: (timestamp: string) => string;
 }) {
-  const [showReactions, setShowReactions] = React.useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const positiveReactions = REACTIONS.filter((r) => r.category === "positive");
 
   return (
@@ -152,5 +153,3 @@ function ActivityCard({
     </div>
   );
 }
-
-import * as React from "react";
