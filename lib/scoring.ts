@@ -52,7 +52,7 @@ export interface AwardResult {
 /** Awards points; ×1.5 when this is the strictly weakest area — the system pays you to rebalance. */
 export function award(points: number, section: Section, all: Section[], now = new Date()): AwardResult {
   const decayed = applyDecay(section, now);
-  const scores = all.filter((s) => s.enabled).map((s) => s.currentScore);
+  const scores = all.filter((s) => s.enabled).map((s) => applyDecay(s, now).currentScore);
   let isWeakest = false;
   if (scores.length > 1) {
     const lowest = Math.min(...scores);

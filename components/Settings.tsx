@@ -15,7 +15,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
         <Block title="Purpose" note="Your north star — shown above the wheel.">
           <input
-            value={state.profile.purpose}
+            value={state.profile.northStar || state.profile.purpose}
             onChange={(e) => dispatch({ type: "setPurpose", purpose: e.target.value })}
             placeholder="What is it all for?"
             className="w-full bg-panel2 text-sm rounded-md px-3 py-2 border border-white/10 focus:outline-none focus:border-indigo-400/60"
@@ -58,7 +58,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
                     step={1}
                     value={s.weight}
                     onChange={(e) => dispatch({ type: "setSectionWeight", id: s.id, weight: Number(e.target.value) })}
-                    className="w-full mt-2 accent-indigo-400"
+                    aria-label={`${s.name} importance`} className="w-full mt-2 accent-indigo-400"
                   />
                 </div>
               );
@@ -68,15 +68,12 @@ export default function Settings({ onClose }: { onClose: () => void }) {
 
         <Block title="Data" note="Everything lives in this browser only. Nothing is sent anywhere.">
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => {
-                dispatch({ type: "populateDemo" });
-                setDone("Populated — every area at 85. This is what balanced looks like.");
-              }}
-              className="text-sm bg-white/8 hover:bg-white/12 rounded-md px-3 py-1.5 border border-white/10"
-            >
-              Populate with balanced demo data
-            </button>
+            <button onClick={() => {
+              const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }));
+              const link = document.createElement("a"); link.href = url; link.download = "wheel-of-life-backup.json"; link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              setDone("Backup exported.");
+            }} className="text-sm bg-panel2 rounded-md px-3 py-2 border border-white/10">Export backup</button>
             {!confirmErase ? (
               <button
                 onClick={() => setConfirmErase(true)}
@@ -86,7 +83,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
               </button>
             ) : (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-text2">Huh… ok… well… sure?</span>
+                <span className="text-text2">Erase goals, tasks, habits and history?</span>
                 <button
                   onClick={() => {
                     dispatch({ type: "eraseAll" });

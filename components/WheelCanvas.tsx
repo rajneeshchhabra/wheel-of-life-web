@@ -30,6 +30,7 @@ export default function WheelCanvas({ sections, levels, todayGains, rotationSpee
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     let raf = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -43,11 +44,11 @@ export default function WheelCanvas({ sections, levels, todayGains, rotationSpee
 
     const frame = (t: number) => {
       const { sections, levels, todayGains, rotationSpeed } = propsRef.current;
-      if (lastTickRef.current != null) {
+      if (lastTickRef.current != null && !reducedMotion.matches) {
         rotationRef.current = (rotationRef.current + ((t - lastTickRef.current) / 1000) * rotationSpeed) % 360;
       }
       lastTickRef.current = t;
-      draw(ctx, canvas, sections.filter((s) => s.enabled), levels, todayGains, rotationRef.current, t);
+      draw(ctx, canvas, sections.filter((s) => s.enabled), levels, todayGains, rotationRef.current, reducedMotion.matches ? 0 : t);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -87,6 +88,8 @@ export default function WheelCanvas({ sections, levels, todayGains, rotationSpee
   return (
     <canvas
       ref={canvasRef}
+      role="img"
+      aria-label="Life area momentum wheel. Use the area buttons below to select an area."
       onClick={handleClick}
       className="w-full h-full cursor-pointer"
       style={{ display: "block" }}
