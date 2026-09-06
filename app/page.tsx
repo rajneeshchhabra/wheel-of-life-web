@@ -101,7 +101,8 @@ export default function Dashboard() {
         </div>
 
         {/* RIGHT: BUDDIES + IN PLAY */}
-        <div className="order-3 min-h-[300px] space-y-3">
+        <div className="order-3 min-h-[300px] space-y-3 border-2 border-yellow-500">
+          <div className="bg-yellow-900/50 p-2 text-yellow-400 text-xs">TEST: Right Column</div>
           <BuddyFeed />
           <div className="border-t border-white/10 pt-3">
             <InPlayRail onToast={setToast} />
