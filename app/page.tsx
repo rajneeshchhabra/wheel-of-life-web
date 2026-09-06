@@ -7,13 +7,17 @@ import WheelCanvas from "@/components/WheelCanvas";
 import { AccomplishedRail, InPlayRail, Modal } from "@/components/Rails";
 import Settings from "@/components/Settings";
 import OnboardingSimple from "@/components/OnboardingSimple";
+import BuddyFeed from "@/components/BuddyFeed";
+import WorkoutLogger from "@/components/WorkoutLogger";
 import type { Section } from "@/lib/types";
 
 export default function Dashboard() {
-  const { state, dispatch, hydrated } = useStore();
+  const { state, hydrated } = useStore();
   const [showSettings, setShowSettings] = useState(false);
   const [selected, setSelected] = useState<Section | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [showWorkoutLogger, setShowWorkoutLogger] = useState(false);
+  const [selectedHabitForWorkout, setSelectedHabitForWorkout] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -21,7 +25,7 @@ export default function Dashboard() {
     return () => clearTimeout(id);
   }, [toast]);
 
-  const { levels, todayGains, actionsToday } = useMemo(() => {
+  const { levels, todayGains, actionsToday, suggestedTasks } = useMemo(() => {
     const lifetime: Record<string, number> = {};
     const gains: Record<string, number> = {};
     let today = 0;
@@ -35,33 +39,58 @@ export default function Dashboard() {
       }
     }
     const levels = Object.fromEntries(Object.entries(lifetime).map(([k, v]) => [k, levelFor(v).level]));
-    return { levels, todayGains: gains, actionsToday: today };
-  }, [state.ledger]);
+
+    // Suggest tasks from incomplete goals (prioritize habits)
+    const habits = state.habits.filter(h => !h.isFormed);
+    const suggested = habits.slice(0, 3);
+
+    return { levels, todayGains: gains, actionsToday: today, suggestedTasks: suggested };
+  }, [state.ledger, state.habits]);
 
   if (!hydrated) return <div className="min-h-screen bg-bg" />;
   if (!state.setupDone) return <OnboardingSimple />;
 
   return (
     <main className="min-h-screen bg-bg text-text1">
-      <header className="flex items-center justify-between px-5 py-3">
+      <header className="flex items-center justify-between px-5 py-3 border-b border-white/5">
         <div className="text-[11px] tracking-[0.22em] font-bold text-text3">WHEEL OF LIFE</div>
-        <button
-          onClick={() => dispatch({ type: "setPurpose", purpose: prompt("What is it all for?", state.profile.purpose) ?? state.profile.purpose })}
-          className="text-sm italic text-text2 hover:text-text1 max-w-[60vw] truncate"
-          title="Click to edit your purpose"
-        >
-          {state.profile.purpose || "Set your purpose — what is it all for?"}
-        </button>
+        <div className="text-sm italic text-text2 max-w-[40vw] truncate">
+          {state.profile.northStar || state.profile.purpose || "Your north star"}
+        </div>
         <button onClick={() => setShowSettings(true)} className="text-text2 hover:text-text1 text-lg" title="Settings">
           ⚙
         </button>
       </header>
 
-      <div className="grid gap-3 px-3 pb-3 lg:grid-cols-[300px_1fr_380px]" style={{ minHeight: "calc(100vh - 56px)" }}>
-        <div className="order-2 lg:order-1 min-h-[300px]">
+      {/* TODAY'S SUGGESTED ACTIONS */}
+      {suggestedTasks.length > 0 && (
+        <div className="px-3 pt-3 pb-2 border-b border-white/5">
+          <h2 className="text-xs font-bold text-text3 uppercase tracking-wider mb-2">What&apos;s Next Today?</h2>
+          <div className="flex gap-2 flex-wrap">
+            {suggestedTasks.map((habit) => (
+              <button
+                key={habit.id}
+                onClick={() => {
+                  setSelectedHabitForWorkout(habit.id);
+                  setShowWorkoutLogger(true);
+                }}
+                className="px-3 py-1.5 bg-panel2 hover:bg-panel border border-white/10 rounded-lg text-xs font-semibold text-text1 transition"
+              >
+                {habit.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-3 px-3 py-3 lg:grid-cols-[280px_1fr_320px]" style={{ minHeight: "calc(100vh - 120px)" }}>
+        {/* LEFT: ACCOMPLISHED */}
+        <div className="order-2 lg:order-1 min-h-[300px] overflow-y-auto">
           <AccomplishedRail />
         </div>
-        <div className="order-1 lg:order-2 min-h-[520px] aspect-square lg:aspect-auto">
+
+        {/* CENTER: WHEEL */}
+        <div className="order-1 lg:order-2 min-h-[400px] flex items-center justify-center">
           <WheelCanvas
             sections={state.sections}
             levels={levels}
@@ -70,13 +99,28 @@ export default function Dashboard() {
             onSelect={setSelected}
           />
         </div>
-        <div className="order-3 min-h-[300px]">
-          <InPlayRail onToast={setToast} />
+
+        {/* RIGHT: BUDDIES + IN PLAY */}
+        <div className="order-3 min-h-[300px] space-y-3">
+          <BuddyFeed />
+          <div className="border-t border-white/10 pt-3">
+            <InPlayRail onToast={setToast} />
+          </div>
         </div>
       </div>
 
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       {selected && <SectionSheet section={selected} onClose={() => setSelected(null)} />}
+      {showWorkoutLogger && selectedHabitForWorkout && (
+        <WorkoutLogger
+          habitId={selectedHabitForWorkout}
+          onClose={() => {
+            setShowWorkoutLogger(false);
+            setSelectedHabitForWorkout(null);
+            setToast("Great work! 🔥");
+          }}
+        />
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-panel border border-white/10 rounded-full px-4 py-2 text-sm shadow-xl">
