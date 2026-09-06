@@ -6,7 +6,8 @@ import { levelFor, rotationSpeed } from "@/lib/scoring";
 import WheelCanvas from "@/components/WheelCanvas";
 import { AccomplishedRail, InPlayRail, Modal } from "@/components/Rails";
 import Settings from "@/components/Settings";
-import Onboarding from "@/components/Onboarding";
+import OnboardingSimple from "@/components/OnboardingSimple";
+import BuddyFeed from "@/components/BuddyFeed";
 import type { Section } from "@/lib/types";
 
 export default function Dashboard() {
@@ -39,7 +40,7 @@ export default function Dashboard() {
   }, [state.ledger]);
 
   if (!hydrated) return <div className="min-h-screen bg-bg" />;
-  if (!state.setupDone) return <Onboarding />;
+  if (!state.setupDone) return <OnboardingSimple />;
 
   return (
     <main className="min-h-screen bg-bg text-text1">

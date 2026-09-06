@@ -61,6 +61,77 @@ export interface PointsEntry {
 export interface Profile {
   name: string;
   purpose: string;
+  northStar?: string; // "Build strong health" etc
+  gurus?: string[]; // IDs of selected gurus
+}
+
+// BUDDY SYSTEM
+export interface Buddy {
+  id: string;
+  name: string;
+  email?: string;
+  status: "active" | "pending" | "removed";
+  addedAt: string;
+}
+
+// WORKOUTS & REGIMENS
+export type WorkoutType = "cardio" | "strength" | "flexibility" | "general";
+
+export interface WorkoutRegimen {
+  id: string;
+  name: string;
+  type: WorkoutType;
+  description: string;
+  durationWeeks: number;
+  durationMinPerSession: number;
+  frequency: "3x" | "4x" | "5x" | "6x" | "daily"; // per week
+}
+
+export interface WorkoutSession {
+  id: string;
+  habitId: string; // Links to a habit
+  date: string; // YYYY-MM-DD
+  type: WorkoutType;
+  duration: number; // minutes
+  distance?: number; // km
+  pace?: string; // min:sec per km
+  repsData?: Record<string, number>; // exercise name -> reps
+  rpe?: number; // 1-5 (Rate of Perceived Exertion)
+  notes?: string;
+}
+
+// SOCIAL/ACTIVITY
+export type ReactionType =
+  | "wellDone" | "onFire" | "weveGotYou" | "yes" | "king" // positive
+  | "whatHappened" | "noWorries" | "gotThis" | "needHelp" | "together" // supportive
+  | "prove" | "ahead" | "sameLol" | "dontTell" | "notBad"; // playful
+
+export interface Activity {
+  id: string;
+  userId: string;
+  type: "habitCompleted" | "goalAchieved" | "streakMilestone" | "levelUp";
+  title: string;
+  description: string;
+  timestamp: string;
+  relatedIds?: { sectionId?: string; habitId?: string; goalId?: string };
+}
+
+export interface Reaction {
+  id: string;
+  activityId: string;
+  fromBuddyId: string;
+  type: ReactionType;
+  message?: string;
+  timestamp: string;
+}
+
+// GURUS (for narrative)
+export interface Guru {
+  id: string;
+  name: string;
+  field: string; // "Stoicism", "Entrepreneurship", etc
+  oneLineBio: string;
+  relatedAreas?: string[]; // Fitness, Relationships, etc
 }
 
 export interface AppState {
@@ -72,6 +143,10 @@ export interface AppState {
   habits: Habit[];
   leaveBehind: HabitToLeave[];
   ledger: PointsEntry[];
+  buddies: Buddy[]; // NEW
+  workoutSessions: WorkoutSession[]; // NEW
+  activities: Activity[]; // NEW
+  reactions: Reaction[]; // NEW
   privacySeen: boolean;
   setupDone: boolean;
 }
